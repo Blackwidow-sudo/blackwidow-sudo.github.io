@@ -6,6 +6,11 @@
 	let { children } = $props()
 </script>
 
-<ParaglideJS {i18n}>
-	{@render children()}
-</ParaglideJS>
+<header>
+	<nav></nav>
+</header>
+<main class="container mx-auto py-8">
+	<ParaglideJS {i18n}>
+		{@render children()}
+	</ParaglideJS>
+</main>

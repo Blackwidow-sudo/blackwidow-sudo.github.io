@@ -2,62 +2,51 @@
 	import SwapCamera from 'lucide-svelte/icons/refresh-ccw'
 	import Camera from 'lucide-svelte/icons/camera'
 	import { Button } from '$lib/components/ui/button'
-	import { untrack } from 'svelte'
+	import { onMount, untrack } from 'svelte'
+
+	type FacingMode = 'environment' | 'user'
+
+	interface Props {
+		debug?: boolean
+	}
+
+	let { debug }: Props = $props()
 
 	let video: HTMLVideoElement | undefined = $state()
-	let stream: MediaStream | undefined = $state()
+	let stream: MediaStream | null = $state(null)
 
-	let camera = $derived.by(() => {
-		if (stream) {
-			const [track] = stream?.getVideoTracks()
+	let track = $derived.by(() => {
+		const [track] = stream?.getVideoTracks() ?? []
 
-			return {
-				track,
-				settings: track?.getSettings(),
-				capabilities: track?.getCapabilities(),
-				constraints: track?.getConstraints()
-			}
-		}
+		return track || null
+	})
+	let settings = $derived(track?.getSettings() ?? {})
+	let capabilities = $derived(track?.getCapabilities() ?? {})
+	let constraints = $derived(track?.getConstraints() ?? {})
 
-		return {}
+	let hasCapability = $derived.by(() => (capability: string) => {
+		return capabilities && capability in capabilities
 	})
 
 	$effect(() => {
-		initCamera()
-			.then((videoStream) => {
-				untrack(() => (stream = videoStream))
-
-				if (video) {
-					video.srcObject = videoStream
-				}
-			})
-			.catch(console.error)
-
-		return () => {
-			stream?.getTracks().forEach((track) => track.stop())
+		if (video && stream) {
+			video.srcObject = stream
 		}
+
+		return () => stopCamera()
 	})
 
-	function initCamera(facingMode = 'environment') {
-		return navigator.mediaDevices.getUserMedia({
-			audio: false,
-			video: {
-				facingMode,
-				width: { ideal: 1920 },
-				height: { ideal: 1080 }
-			}
-		})
-	}
+	onMount(() => {
+		startCamera('environment')
+	})
 
-	function hasCapability(capability: string) {
-		return camera.capabilities && capability in camera.capabilities
-	}
+	$inspect({ stream, track, settings, capabilities, constraints })
 
 	async function onZoom(e: Event) {
 		try {
 			const zoom = (e.target as HTMLInputElement).valueAsNumber
 
-			await camera.track?.applyConstraints({
+			await track?.applyConstraints({
 				advanced: [{ zoom }]
 			})
 		} catch (err) {
@@ -65,20 +54,35 @@
 		}
 	}
 
-	async function switchCamera(e: Event) {
+	async function startCamera(facingMode: FacingMode = 'environment') {
+		if (stream instanceof MediaStream) {
+			stopCamera()
+		}
+
 		try {
-			const facingMode = camera.constraints?.facingMode === 'environment' ? 'user' : 'environment'
-
-			const videoStream = await initCamera(facingMode)
-
-			stream?.getTracks().forEach((track) => track.stop())
-
-			stream = videoStream
-
-			video.srcObject = videoStream
+			stream = await window.navigator.mediaDevices.getUserMedia({
+				audio: false,
+				video: {
+					facingMode,
+					width: { ideal: 1920 },
+					height: { ideal: 1080 }
+				}
+			})
 		} catch (err) {
 			console.error(err)
 		}
+	}
+
+	function stopCamera() {
+		stream?.getTracks().forEach((track) => track.stop())
+
+		stream = null
+	}
+
+	async function switchCamera(e: Event) {
+		const facingMode = constraints?.facingMode === 'environment' ? 'user' : 'environment'
+
+		await startCamera(facingMode)
 	}
 </script>
 
@@ -89,10 +93,10 @@
 				<input
 					type="range"
 					class="slider"
-					min={camera.capabilities?.zoom?.min}
-					max={camera.capabilities?.zoom?.max}
-					step={camera.capabilities?.zoom?.step}
-					value={camera.settings?.zoom}
+					min={capabilities?.zoom?.min}
+					max={capabilities?.zoom?.max}
+					step={capabilities?.zoom?.step}
+					value={settings?.zoom}
 					oninput={onZoom} />
 			{/if}
 		</div>
@@ -115,12 +119,19 @@
 	<!-- svelte-ignore a11y_media_has_caption -->
 	<video
 		class="mx-auto"
-		width={camera.settings?.width}
-		height={camera.settings?.height}
+		width={settings?.width}
+		height={settings?.height}
 		autoplay
 		playsinline
 		bind:this={video}></video>
 </div>
+{#if debug}
+	<pre class="rounded-md bg-slate-800 p-4 text-slate-300">{JSON.stringify(
+			{ stream, track, settings, capabilities, constraints },
+			null,
+			4
+		)}</pre>
+{/if}
 
 <style>
 	.slider {

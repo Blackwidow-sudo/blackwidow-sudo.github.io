@@ -99,6 +99,10 @@
 
 		await startCamera(facingMode)
 	}
+
+	function preventDefault(e: Event) {
+		e.preventDefault()
+	}
 </script>
 
 <div class="relative mx-auto w-full">
@@ -112,7 +116,10 @@
 					max={capabilities?.zoom?.max}
 					step={capabilities?.zoom?.step}
 					value={settings?.zoom}
-					oninput={onZoom} />
+					oninput={onZoom}
+					ontouchstart={preventDefault}
+					ontouchend={preventDefault}
+					ontouchmove={preventDefault} />
 			{/if}
 		</div>
 		<div class="flex w-full items-center justify-center gap-2">

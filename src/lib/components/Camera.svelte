@@ -1,8 +1,9 @@
 <script lang="ts">
 	import SwapCamera from 'lucide-svelte/icons/refresh-ccw'
 	import Camera from 'lucide-svelte/icons/camera'
+	import { browser } from '$app/environment'
 	import { Button } from '$lib/components/ui/button'
-	import { onMount, untrack } from 'svelte'
+	import { onDestroy, onMount, untrack } from 'svelte'
 
 	type FacingMode = 'environment' | 'user'
 
@@ -24,20 +25,35 @@
 	let capabilities = $derived(track?.getCapabilities() ?? {})
 	let constraints = $derived(track?.getConstraints() ?? {})
 
+	let debugJson = $derived.by(() => {
+		const cameraAttributes = {
+			label: track?.label,
+			settings,
+			capabilities,
+			constraints
+		}
+
+		return JSON.stringify(cameraAttributes, undefined, 4)
+	})
+
 	let hasCapability = $derived.by(() => (capability: string) => {
 		return capabilities && capability in capabilities
 	})
 
 	$effect(() => {
-		if (video && stream) {
-			video.srcObject = stream
-		}
+		const videoEl = untrack(() => video)
 
-		return () => stopCamera()
+		if (videoEl && stream) {
+			videoEl.srcObject = stream
+		}
 	})
 
 	onMount(() => {
-		startCamera('environment')
+		browser && startCamera('environment')
+	})
+
+	onDestroy(() => {
+		stopCamera()
 	})
 
 	$inspect({ stream, track, settings, capabilities, constraints })
@@ -64,8 +80,7 @@
 				audio: false,
 				video: {
 					facingMode,
-					width: { ideal: 1920 },
-					height: { ideal: 1080 }
+					width: { min: 800, max: 1920 }
 				}
 			})
 		} catch (err) {
@@ -86,7 +101,7 @@
 	}
 </script>
 
-<div class="relative mx-auto">
+<div class="relative mx-auto w-full">
 	<div class="absolute flex size-full flex-col items-center justify-between p-4">
 		<div class="flex w-full flex-grow items-center justify-end">
 			{#if hasCapability('zoom')}
@@ -118,19 +133,15 @@
 	</div>
 	<!-- svelte-ignore a11y_media_has_caption -->
 	<video
-		class="mx-auto"
-		width={settings?.width}
-		height={settings?.height}
+		class="mx-auto w-full"
 		autoplay
 		playsinline
 		bind:this={video}></video>
 </div>
 {#if debug}
-	<pre class="rounded-md bg-slate-800 p-4 text-slate-300">{JSON.stringify(
-			{ stream, track, settings, capabilities, constraints },
-			null,
-			4
-		)}</pre>
+	<pre class="mt-8 rounded-md bg-slate-800 p-4 text-slate-300">
+		{debugJson}
+	</pre>
 {/if}
 
 <style>

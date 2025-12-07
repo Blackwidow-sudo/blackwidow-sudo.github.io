@@ -5,4 +5,4 @@
 	let { data }: { data: PageData } = $props()
 </script>
 
-<Camera />
+<Camera debug />

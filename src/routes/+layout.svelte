@@ -1,16 +1,19 @@
 <script lang="ts">
-	import '../app.css'
-	import { i18n } from '$lib/i18n'
-	import { ParaglideJS } from '@inlang/paraglide-sveltekit'
+	import './layout.css'
+	import favicon from '$lib/assets/favicon.svg'
 
 	let { children } = $props()
 </script>
+
+<svelte:head>
+	<link
+		rel="icon"
+		href={favicon} />
+</svelte:head>
 
 <header>
 	<nav></nav>
 </header>
 <main class="container mx-auto py-8">
-	<ParaglideJS {i18n}>
-		{@render children()}
-	</ParaglideJS>
+	{@render children()}
 </main>

@@ -1,6 +1,6 @@
 <script lang="ts">
-	import SwapCamera from 'lucide-svelte/icons/refresh-ccw'
-	import Camera from 'lucide-svelte/icons/camera'
+	import SwapCamera from '@lucide/svelte/icons/refresh-ccw'
+	import Camera from '@lucide/svelte/icons/camera'
 	import { browser } from '$app/environment'
 	import { Button } from '$lib/components/ui/button'
 	import { onDestroy, onMount, untrack } from 'svelte'
